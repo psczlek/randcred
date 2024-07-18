@@ -4,6 +4,7 @@
 import argparse
 import secrets
 import string
+from typing import Optional, TypeAlias
 
 
 class Color:
@@ -21,39 +22,39 @@ class Color:
     }
 
     @staticmethod
-    def redify(msg: str) -> str:
-        return Color.colorify(msg, "red")
+    def red(msg: str) -> str:
+        return Color.color(msg, "red")
 
     @staticmethod
-    def greenify(msg: str) -> str:
-        return Color.colorify(msg, "green")
+    def green(msg: str) -> str:
+        return Color.color(msg, "green")
 
     @staticmethod
-    def blueify(msg: str) -> str:
-        return Color.colorify(msg, "blue")
+    def blue(msg: str) -> str:
+        return Color.color(msg, "blue")
 
     @staticmethod
-    def yellowify(msg: str) -> str:
-        return Color.colorify(msg, "yellow")
+    def yellow(msg: str) -> str:
+        return Color.color(msg, "yellow")
 
     @staticmethod
-    def grayify(msg: str) -> str:
-        return Color.colorify(msg, "gray")
+    def gray(msg: str) -> str:
+        return Color.color(msg, "gray")
 
     @staticmethod
-    def light_grayify(msg: str) -> str:
-        return Color.colorify(msg, "light_gray")
+    def light_gray(msg: str) -> str:
+        return Color.color(msg, "light_gray")
 
     @staticmethod
-    def pinkify(msg: str) -> str:
-        return Color.colorify(msg, "pink")
+    def pink(msg: str) -> str:
+        return Color.color(msg, "pink")
 
     @staticmethod
-    def cyanify(msg: str) -> str:
-        return Color.colorify(msg, "cyan")
+    def cyan(msg: str) -> str:
+        return Color.color(msg, "cyan")
 
     @staticmethod
-    def colorify(text: str, attrs: str) -> str:
+    def color(text: str, attrs: str) -> str:
         colors = Color.colors
         msg = [colors[attr] for attr in attrs.split() if attr in colors]
         msg.append(str(text))
@@ -61,84 +62,119 @@ class Color:
         return "".join(msg)
 
 
-class Randcred:
-    def __init__(self) -> None:
-        pass
+def get_username(len: int = 10) -> str:
+    charset = string.ascii_letters
+    return "".join(secrets.choice(charset) for _ in range(len))
 
-    @staticmethod
-    def help() -> None:
-        helpmsg: list[str] = [
-            "Usage:",
-            "  randcred [-u <len>] [-p <len>] [-w] [-W <file>] [-n <n>]\n",
-            "Options:",
-            "  -h, --help                   This help message\n",
-            "  -u, --unamelen <len>         Username length to use, shouldn't be less than 10",
-            "  -p, --passwdlen <len>        Password length to use, shouldn't be less than 10",
-            "  -w, --without-punctuation    Exclude the special characters from the password charset",
-            "  -W, --write <file>           Write the result to a file instead of displaying it",
-            "  -n, --pool <n>               Create <n> credentials",
-            "  -l, --label <label>          An account name or some label (that doesn't work if -n/--pool is specified)"
-        ]
-        for line in helpmsg:
-            print(line)
 
-    def username(self, len: int) -> str:
-        charset: str = string.ascii_letters
-        return "".join(secrets.choice(charset) for _ in range(len))
+def get_password(len: int = 25, punctuation: bool = True) -> str:
+    charset = string.ascii_letters + string.digits
+    if punctuation:
+        charset += string.punctuation
+    return "".join(secrets.choice(charset) for _ in range(len))
 
-    def password(self, len: int, punctuation: bool) -> str:
-        charset: str = string.ascii_letters + string.digits if punctuation else string.ascii_letters + string.digits + string.punctuation
-        return "".join(secrets.choice(charset) for _ in range(len))
 
-    def write_to_file(self, uname: str, passwd: str, label: str, fname: str) -> int:
-        bytes_written: int = 0
-        out_file: str = fname if fname else "".join(secrets.choice(string.hexdigits) for _ in range(10))
-        with open(out_file, "a+") as fout:
+def write_to_file(
+        uname: str,
+        passwd: str,
+        label: Optional[str] = None,
+        fname: Optional[str] = None,
+) -> int:
+    bytes_written = 0
+    if fname is not None:
+        out_file = fname
+    else:
+        out_file = "".join(secrets.choice(string.hexdigits) for _ in range(10))
+    with open(out_file, "a+") as fout:
+        if label is not None:
             bytes_written += fout.write(f"{label}:\n")
-            bytes_written += fout.write(f"  -- Username: {uname}\n")
-            bytes_written += fout.write(f"  -- Password: {passwd}\n")
+        bytes_written += fout.write(f"==> username: {uname}\n")
+        bytes_written += fout.write(f"==> password: {passwd}\n")
         return bytes_written
 
 
+AP_Namespace: TypeAlias = argparse.Namespace
+
+
+def make_args() -> AP_Namespace:
+    parser = argparse.ArgumentParser(prog="randcred")
+    parser.add_argument(
+        "-u", "--unamelen",
+        help="username length to use",
+        type=int,
+        default=10,
+        required=False,
+        dest="uflag",
+        metavar="<len>")
+    parser.add_argument(
+        "-p", "--passwdlen",
+        help="password length to use (shouldn't be less than 10)",
+        type=int,
+        default=25,
+        required=False,
+        dest="pflag",
+        metavar="<len>")
+    parser.add_argument(
+        "-w",
+        "--without-punctuation",
+        help="exclude the special characters from the password charset",
+        action="store_false",
+        required=False,
+        dest="wflag")
+    parser.add_argument(
+        "-W", "--write",
+        help="write the result to a file instead of displaying it",
+        type=str,
+        required=False,
+        dest="Wflag",
+        metavar="<file name>")
+    parser.add_argument(
+        "-n", "--pool",
+        help="create <n> credentials",
+        type=int,
+        default=1,
+        required=False,
+        dest="nflag",
+        metavar="<n>")
+    parser.add_argument(
+        "-l", "--label",
+        help="an account name or some label (doesn't work if -n/--pool is specified)",
+        type=str,
+        required=False,
+        dest="lflag",
+        metavar="<label>")
+    return parser.parse_args()
+
+
 def main() -> None:
-    arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        prog="randcred",
-        usage=None,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        add_help=False
-    )
-    arg_parser.add_argument("-h", "--help", action="store_true", required=False)
-    arg_parser.add_argument("-u", "--unamelen", type=int, default=10, required=False)
-    arg_parser.add_argument("-p", "--passwdlen", type=int, default=25, required=False)
-    arg_parser.add_argument("-w", "--without-punctuation", action="store_true", required=False)
-    arg_parser.add_argument("-W", "--write", type=str, required=False)
-    arg_parser.add_argument("-n", "--pool", type=int, default=1, required=False)
-    arg_parser.add_argument("-l", "--label", type=str, required=False)
-    args: argparse.Namespace = arg_parser.parse_args()
-    if args.help:
-        Randcred.help()
-        exit(0)
-    if args.unamelen < 10 or args.passwdlen < 10:
-        print("Username/password length shouldn't be less than 10")
+    args = make_args()
+    if args.pflag < 13:
+        print("password length shouldn't be less than 13")
         exit(1)
-    generator: Randcred = Randcred()
+    # why would we?
+    elif args.pflag > 1_000_000:
+        args.pflag = 25
     try:
-        if args.write:
-            bytes_written: int = 0
-            for i in range(args.pool):
-                username: str = generator.username(args.unamelen)
-                password: str = generator.password(args.passwdlen, args.without_punctuation)
-                bytes_written += generator.write_to_file(username, password, ("" if args.pool > 1 else args.label), args.write)
-            print(f"  + Results have been written to {Color.blueify(args.write)} ({bytes_written} bytes)")
+        if args.Wflag:
+            bytes_written = 0
+            for i in range(args.nflag):
+                username = get_username(args.uflag)
+                password = get_password(args.pflag, args.wflag)
+                bytes_written += write_to_file(
+                    username,
+                    password,
+                    ("" if args.nflag > 1 else args.lflag),
+                    args.Wflag)
+            print(f"==> results have been written to {Color.blue(args.write)} ({bytes_written} bytes)")
         else:
-            for i in range(args.pool):
-                username: str = generator.username(args.unamelen)
-                password: str = generator.password(args.passwdlen, args.without_punctuation)
-                if args.pool == 1 and args.label:
-                    print(f"{Color.pinkify(args.label)}:")
-                print(f"  -- {Color.cyanify('Username')}: {Color.greenify(username)}")
-                print(f"  -- {Color.cyanify('Password')}: {Color.colorify(password, 'green' if len(password) >= 25 else 'yellow')}")
-                if args.pool > 1 and i != args.pool-1:
+            for i in range(args.nflag):
+                username = get_username(args.uflag)
+                password = get_password(args.pflag, args.wflag)
+                if args.nflag == 1 and args.lflag:
+                    print(f"{Color.pink(args.lflag)}:")
+                print(f"==> {Color.cyan('username')}: {Color.yellow(username)}")
+                print(f"==> {Color.cyan('password')}: {Color.yellow(password)}")
+                if args.nflag > 1 and i != args.nflag-1:
                     print("")
     except KeyboardInterrupt:
         exit(0)
