@@ -165,7 +165,7 @@ def main() -> None:
                     password,
                     ("" if args.nflag > 1 else args.lflag),
                     args.Wflag)
-            print(f"==> results have been written to {Color.blue(args.write)} ({bytes_written} bytes)")
+            print(f"==> results have been written to {Color.blue(args.Wflag)} ({bytes_written} bytes)")
         else:
             for i in range(args.nflag):
                 username = get_username(args.uflag)
